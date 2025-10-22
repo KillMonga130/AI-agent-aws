@@ -6,6 +6,7 @@
 **Team Member:** [Your Name]  
 **Date:** October 23, 2025  
 **GitHub Repository:** https://github.com/KillMonga130/AI-agent-aws
+**Amplify Demo URL:** [add after deploy]
 
 ---
 
@@ -303,6 +304,12 @@ Could create a static demo page showing:
 - Architecture diagram
 - API documentation
 - Video embed
+
+**Amplify Static Demo (Recommended Now):**
+- Deployed via AWS Amplify Hosting from `web/` folder.
+- URL: [paste after deploy]
+- Defaults to mock mode; you can try live API by unchecking "Use mock data" and entering the API Gateway URL.
+- See `docs/AMPLIFY.md` for 5‑minute deploy steps.
 
 ---
 

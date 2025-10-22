@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Autonomous Ocean Forecasting Agent – Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg">
+    <div class="bg-gradient"></div>
+    <div class="bg-radial"></div>
+  </div>
+
+  <nav class="nav container">
+    <div class="brand">
+      <span class="logo">🌊</span>
+      <span>Ocean Agent</span>
+      <span class="badge beta">Demo</span>
+    </div>
+    <div class="links">
+      <a href="../README.md" target="_blank" rel="noopener">Docs</a>
+      <a href="https://github.com/KillMonga130/AI-agent-aws" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+
+  <header class="hero container">
+    <h1>Maritime safety, at a glance</h1>
+    <p>LLM‑powered risk analysis using AWS Bedrock AgentCore + Amazon Nova Pro. Ask a question and get an actionable, transparent safety assessment.</p>
+    <div class="badges">
+      <span class="chip">Bedrock AgentCore</span>
+      <span class="chip">Nova Pro reasoning</span>
+      <span class="chip">Open‑Meteo data</span>
+    </div>
+  </header>
+
+  <main class="container grid-2">
+    <!-- Left: Controls -->
+    <section class="card glass">
+      <h2 class="card-title">Try the demo</h2>
+      <div class="controls">
+        <label class="label" for="query">Your question</label>
+        <textarea id="query" rows="3" placeholder="Is it safe to sail from Cape Town to Mossel Bay tomorrow?"></textarea>
+
+        <div class="quick">
+          <button class="pill" data-example="What are the wave conditions near Mossel Bay this weekend?">Wave conditions</button>
+          <button class="pill" data-example="Is it safe for a small fishing vessel to depart Durban at sunrise?">Small vessel</button>
+          <button class="pill" data-example="Should I delay departure from Cape Town to Port Elizabeth by 24 hours?">Delay decision</button>
+        </div>
+
+        <div class="row spread">
+          <label class="switch">
+            <input type="checkbox" id="useMock" checked />
+            <span class="slider"></span>
+            <span class="switch-label">Mock mode</span>
+          </label>
+          <small class="hint">Toggle off to try a live API endpoint</small>
+        </div>
+
+        <label class="label" for="apiEndpoint">API endpoint</label>
+        <input id="apiEndpoint" class="input" placeholder="https://<api-id>.execute-api.<region>.amazonaws.com/Prod" />
+
+        <div class="row">
+          <button id="runBtn" class="cta">
+            <span class="spinner" aria-hidden="true"></span>
+            Analyze safety
+          </button>
+          <span id="status" class="status" role="status" aria-live="polite"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Result -->
+    <section class="card glass result-card">
+      <h2 class="card-title">Result</h2>
+      <div id="steps" class="steps hidden" aria-live="polite">
+        <div class="step active"><span class="dot"></span><span>Understanding question</span></div>
+        <div class="step"><span class="dot"></span><span>Fetching data</span></div>
+        <div class="step"><span class="dot"></span><span>Analyzing risk</span></div>
+        <div class="step"><span class="dot"></span><span>Generating recommendations</span></div>
+      </div>
+      <div id="opProgress" class="op-progress hidden"><i></i></div>
+      <div id="result" class="result hidden">
+        <!-- populated by script.js -->
+      </div>
+      <div id="skeleton" class="skeleton hidden">
+        <div class="sk-row"></div>
+        <div class="sk-row"></div>
+        <div class="sk-row half"></div>
+      </div>
+    </section>
+  </main>
+
+  <section class="container about grid-3">
+    <div class="mini-card">
+      <h3>Reasoning LLM</h3>
+      <p>Amazon Nova Pro performs multi‑factor risk analysis with transparent explanations and confidence scoring.</p>
+    </div>
+    <div class="mini-card">
+      <h3>Autonomous pipeline</h3>
+      <p>Multi‑agent flow: ingest → analyze → alert. Integrates real data sources and handles failures gracefully.</p>
+    </div>
+    <div class="mini-card">
+      <h3>Built for scale</h3>
+      <p>Serverless with Lambda, API Gateway and S3. Designed for low latency and cost‑efficient operation.</p>
+    </div>
+  </section>
+
+  <footer class="container">
+    <small>© 2025 Maritime AI • Demo only. Not for navigation.</small>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

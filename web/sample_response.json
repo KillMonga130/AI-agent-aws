@@ -1,0 +1,22 @@
+{
+  "query": "Is it safe to sail from Cape Town to Mossel Bay tomorrow?",
+  "response": "WARNING - Maritime Safety Alert: Strong SE winds (28-32 knots) and significant wave heights (3.5-4.2m) along the route. Consider delaying departure by 12-24 hours.",
+  "alert": {
+    "alert_level": "WARNING",
+    "risk_score": 75.0,
+    "risk_factors": {
+      "wave_height": "3.5-4.2m (significant)",
+      "wind_speed": "28-32 knots (strong)",
+      "visibility": "moderate",
+      "currents": "favorable"
+    },
+    "recommendations": [
+      "Consider delaying departure by 12-24 hours",
+      "Ensure vessel is rated for 4m+ wave heights",
+      "Monitor weather updates closely"
+    ]
+  },
+  "data_sources": ["Open-Meteo Marine", "Copernicus Marine"],
+  "execution_time_seconds": 5.4,
+  "timestamp": "2025-10-23T22:14:00Z"
+}

@@ -222,6 +222,16 @@ LOG_LEVEL=INFO
 - [Everything.md](everything.md) - Full system specification
 - API Docs: Available at `/docs` endpoint when running
 
+### AWS Bedrock Agents scaffold (new)
+
+This repo now includes a minimal Bedrock Agents + Lambda + S3 scaffold:
+
+- `infra/template-agentcore.yaml` (SAM): Data bucket, Ingest Lambda, Agent Gateway Lambda + API
+- `lambdas/ingest/handler.py`: Fetches Open‑Meteo (Copernicus optional via Secrets Manager) and writes to S3
+- `lambdas/agent_gateway/handler.py`: Calls Bedrock Agents `InvokeAgent` for `/query`
+- `schemas/action-groups/fetch_ocean_data.json`: Action group schema for `fetch_ocean_data`
+- See `docs/DEPLOYMENT.md` to deploy and connect your Bedrock Agent + Alias
+
 ## 🎯 Use Cases
 
 1. **Maritime Operators**: Real-time safety alerts for route planning

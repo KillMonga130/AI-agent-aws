@@ -1,0 +1,14 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "ocean-forecasting-agent-v2"
+resolve_s3 = true
+s3_prefix = "ocean-forecasting-agent-v2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+disable_rollback = true
+parameter_overrides = "BedrockRegion=\"us-east-1\" BedrockModelId=\"anthropic.nova-pro-1:0\""
+image_repositories = []
+
+[default.global.parameters]
+region = "us-east-1"

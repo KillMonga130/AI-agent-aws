@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "fetch_ocean_data",
+  "type": "object",
+  "properties": {
+    "latitude": {"type": "number"},
+    "longitude": {"type": "number"},
+    "forecast_hours": {"type": "integer", "minimum": 1, "maximum": 168}
+  },
+  "required": ["latitude", "longitude"],
+  "additionalProperties": false
+}

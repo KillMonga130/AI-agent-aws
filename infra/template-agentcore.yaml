@@ -1,0 +1,150 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Autonomous Ocean Forecasting Agent - Core Infra (Lambda + S3 + API Gateway)
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: ocean-agent
+  BucketName:
+    Type: String
+    Description: S3 bucket name for data (must be globally unique)
+  Region:
+    Type: String
+    Default: us-east-1
+  AgentId:
+    Type: String
+    Description: Bedrock Agent ID (after creation)
+    Default: ""
+  AgentAliasId:
+    Type: String
+    Description: Bedrock Agent Alias ID (after creation)
+    Default: ""
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 512
+    Tracing: Active
+    LoggingConfig:
+      LogFormat: JSON
+    Environment:
+      Variables:
+        LOG_LEVEL: INFO
+        REGION: !Ref Region
+
+Resources:
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      VersioningConfiguration: { Status: Enabled }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: Raw30Day
+            Status: Enabled
+            Prefix: raw/
+            ExpirationInDays: 30
+
+  IngestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-ingest"
+      CodeUri: ../lambdas/ingest/
+      Handler: handler.lambda_handler
+      Environment:
+        Variables:
+          DATA_BUCKET: !Ref DataBucket
+          COPERNICUS_SECRET_NAME: copernicus/credentials
+      Policies:
+        - Statement:
+            - Sid: S3Data
+              Effect: Allow
+              Action: [s3:PutObject, s3:GetObject, s3:ListBucket]
+              Resource:
+                - !GetAtt DataBucket.Arn
+                - !Sub "${DataBucket.Arn}/*"
+            - Sid: SecretsRead
+              Effect: Allow
+              Action: [secretsmanager:GetSecretValue, secretsmanager:DescribeSecret]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:copernicus/*"
+            - Sid: Logs
+              Effect: Allow
+              Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents]
+              Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+
+  AgentExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-agent-execution"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AgentInvokeTools
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: InvokeIngestLambda
+                Effect: Allow
+                Action: ["lambda:InvokeFunction"]
+                Resource: !GetAtt IngestFunction.Arn
+              - Sid: Logs
+                Effect: Allow
+                Action: ["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"]
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock/*"
+
+  ApiGatewayFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-agent-gateway"
+      CodeUri: ../lambdas/agent_gateway/
+      Handler: handler.lambda_handler
+      Environment:
+        Variables:
+          AGENT_ID: !Ref AgentId
+          AGENT_ALIAS_ID: !Ref AgentAliasId
+      Policies:
+        - Statement:
+            - Sid: InvokeAgent
+              Effect: Allow
+              Action: [bedrock:InvokeAgent, bedrock:InvokeAgentAlias]
+              Resource:
+                - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/*"
+                - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent-alias/*"
+            - Sid: Logs
+              Effect: Allow
+              Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents]
+              Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /query
+            Method: POST
+
+Outputs:
+  DataBucketName:
+    Value: !Ref DataBucket
+  IngestFunctionName:
+    Value: !Ref IngestFunction
+  ApiInvokeUrl:
+    Description: Invoke URL root for API (append /query)
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+  AgentExecutionRoleArn:
+    Description: IAM role for Bedrock Agent execution (use when creating the Agent)
+    Value: !GetAtt AgentExecutionRole.Arn

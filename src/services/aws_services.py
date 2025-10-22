@@ -4,10 +4,19 @@ import boto3
 import json
 import logging
 from typing import Any, Dict, Optional
+from datetime import datetime
 from botocore.exceptions import ClientError
 from src.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder for datetime objects."""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 class BedrockClient:
@@ -148,7 +157,7 @@ class S3Client:
             self.client.put_object(
                 Bucket=self.bucket_name,
                 Key=key,
-                Body=json.dumps(data),
+                Body=json.dumps(data, cls=DateTimeEncoder),
                 ContentType="application/json"
             )
             logger.info(f"Stored data to S3: {key}")

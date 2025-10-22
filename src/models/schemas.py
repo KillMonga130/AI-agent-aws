@@ -1,6 +1,6 @@
 """Data models for the Ocean Forecasting Agent."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -14,6 +14,8 @@ class LocationData(BaseModel):
 
 class WeatherData(BaseModel):
     """Weather and wave data from Open-Meteo Marine API."""
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
+    
     wave_height: float = Field(..., description="Significant wave height in meters")
     wave_direction: float = Field(..., description="Wave direction in degrees")
     wave_period: float = Field(..., description="Wave period in seconds")

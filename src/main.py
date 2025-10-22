@@ -3,6 +3,8 @@
 import logging
 import logging.config
 from contextlib import asynccontextmanager
+from datetime import datetime
+from json import JSONEncoder
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -55,12 +57,21 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Autonomous Ocean Forecasting Agent")
 
 
-# Create FastAPI application
+# Custom JSON encoder for datetime
+class DateTimeEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
+# Create FastAPI application with custom JSON encoder
 app = FastAPI(
     title="Autonomous Ocean Forecasting Agent",
     description="Multi-agent AI system for maritime safety powered by AWS Bedrock",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    json_encoder=DateTimeEncoder
 )
 
 # Add CORS middleware

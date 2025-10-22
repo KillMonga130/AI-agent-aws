@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Autonomous Ocean Forecasting Agent - Serverless Deployment
+
+Parameters:
+  BedrockRegion:
+    Type: String
+    Default: us-east-1
+    Description: AWS region for Bedrock service
+  
+  BedrockModelId:
+    Type: String
+    Default: anthropic.nova-pro-1:0
+    Description: Bedrock model ID to use
+
+Resources:
+  # S3 bucket for storing audit trail data
+  AuditBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'ocean-forecasting-audit-${AWS::AccountId}-${AWS::Region}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # IAM role for Lambda function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:GetModel
+                Resource: !Sub 'arn:aws:bedrock:${BedrockRegion}:${AWS::AccountId}:foundation-model/*'
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt AuditBucket.Arn
+                  - !Sub '${AuditBucket.Arn}/*'
+
+  # Lambda function with API Gateway integration
+  OceanForecastingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ocean-forecasting-agent
+      CodeUri: .
+      Handler: src.lambda_handler.lambda_handler
+      Runtime: python3.12
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          BEDROCK_REGION: !Ref BedrockRegion
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          S3_BUCKET_NAME: !Ref AuditBucket
+          S3_REGION: !Ref AWS::Region
+      Events:
+        HealthApi:
+          Type: Api
+          Properties:
+            Path: /health
+            Method: GET
+            RestApiId: !Ref ApiGateway
+        InfoApi:
+          Type: Api
+          Properties:
+            Path: /info
+            Method: GET
+            RestApiId: !Ref ApiGateway
+        QueryApi:
+          Type: Api
+          Properties:
+            Path: /query
+            Method: POST
+            RestApiId: !Ref ApiGateway
+
+  # API Gateway
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: ocean-forecasting-api
+      Description: API for Autonomous Ocean Forecasting Agent
+      StageName: Prod
+      EndpointConfiguration: REGIONAL
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod'
+  
+  LambdaFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt OceanForecastingFunction.Arn
+  
+  AuditBucketName:
+    Description: S3 bucket for audit trail
+    Value: !Ref AuditBucket

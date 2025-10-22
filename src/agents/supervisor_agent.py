@@ -98,7 +98,9 @@ class SupervisorAgent:
                 session_id=query.session_id,
                 agent_traces={
                     "ingestion": {
-                        "location": location.model_dump(),
+                        "location_name": location.name,
+                        "latitude": location.latitude,
+                        "longitude": location.longitude,
                         "weather_available": ingestion_result.weather_data is not None,
                         "ocean_available": ingestion_result.ocean_data is not None
                     },

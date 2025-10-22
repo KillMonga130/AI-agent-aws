@@ -17,6 +17,8 @@ This guide deploys the static demo in the `web/` folder to AWS Amplify Hosting.
 - Build settings: leave default (no build step)
 - Artifact (build) directory: set to `web`
 
+Tip: This repo includes an `amplify.yml` at the repo root that tells Amplify to publish the `web/` folder directly. If the console asks for a build command, you can leave it blank or use a no-op (e.g., `echo no-build`).
+
 3) Save and deploy
 - Click "Save and deploy"
 - First build takes ~1–2 minutes
@@ -34,6 +36,16 @@ Or, simpler: append `?endpoint=<YOUR_API_URL>` to the site URL, e.g.
 ```
 https://main.<id>.amplifyapp.com/?endpoint=https%3A%2F%2Faaabp3bu9h.execute-api.us-east-1.amazonaws.com%2FProd
 ```
+
+## Password protect the site (optional)
+If you want a judge-only preview or to keep the demo private:
+
+1) In Amplify Console → your app → App settings → Access control (or Hosting → Access control)
+2) Enable "Password protect"
+3) Set a username and password (basic auth)
+4) Save. Amplify will apply protection almost immediately
+
+Share the Amplify URL and credentials with reviewers. You can disable protection after judging.
 
 ## Notes
 - The Bedrock Agent API may be blocked at the account level. The demo uses mock data by default and gracefully falls back to it when the API isn’t reachable.

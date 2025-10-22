@@ -1,0 +1,120 @@
+"""SAM (Serverless Application Model) template for deployment."""
+
+# This template defines the infrastructure for AWS SAM deployment
+
+template_yaml = """
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Autonomous Ocean Forecasting Agent
+  Multi-agent AI system powered by AWS Bedrock AgentCore
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 512
+    Runtime: python3.11
+    Environment:
+      Variables:
+        BEDROCK_MODEL_ID: us.anthropic.claude-3-5-sonnet-20241022-v2:0
+        LOG_LEVEL: INFO
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: S3 bucket for storing ocean forecasting data
+    Default: ocean-forecast-data
+
+Resources:
+  # S3 Bucket for data storage
+  DataStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${S3BucketName}-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteRawDataAfter30Days
+            Prefix: 'raw/'
+            ExpirationInDays: 30
+            Status: Enabled
+          - Id: DeleteProcessedAfter90Days
+            Prefix: 'processed/'
+            ExpirationInDays: 90
+            Status: Enabled
+
+  # Lambda function for the agent
+  OceanForecastingAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ocean-forecasting-agent
+      CodeUri: .
+      Handler: src.lambda_handler.lambda_handler
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock-runtime:InvokeModel
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:ListBucket
+              Resource:
+                - !GetAtt DataStorageBucket.Arn
+                - !Sub '${DataStorageBucket.Arn}/*'
+      Environment:
+        Variables:
+          S3_BUCKET_NAME: !Ref DataStorageBucket
+      Events:
+        QueryApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /query
+            Method: POST
+        QueryLocationApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /query/location
+            Method: POST
+        HealthApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /health
+            Method: GET
+        InfoApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /info
+            Method: GET
+
+  # API Gateway
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: OceanForecastingAgentAPI
+      Description: API for the Autonomous Ocean Forecasting Agent
+
+Outputs:
+  AgentApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod'
+  
+  DataStorageBucket:
+    Description: S3 bucket for data storage
+    Value: !Ref DataStorageBucket
+  
+  AgentFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt OceanForecastingAgentFunction.Arn
+"""
+
+if __name__ == "__main__":
+    print(template_yaml)

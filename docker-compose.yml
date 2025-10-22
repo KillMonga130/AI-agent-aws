@@ -1,0 +1,27 @@
+# Ocean Forecasting Agent - Docker Compose
+
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - AWS_REGION=us-east-1
+      - BEDROCK_MODEL_ID=us.anthropic.claude-3-5-sonnet-20241022-v2:0
+      - S3_BUCKET_NAME=ocean-forecast-data
+      - LOG_LEVEL=INFO
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    volumes:
+      - .env:/app/.env:ro
+    restart: unless-stopped
+    networks:
+      - ocean-network
+
+networks:
+  ocean-network:
+    driver: bridge

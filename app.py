@@ -64,10 +64,24 @@ with st.sidebar:
     # AWS Configuration
     st.subheader("AWS Settings")
     agent_arn = st.text_input(
-        "Agent ARN",
+        "Agent ARN (optional)",
         value=os.getenv("AGENT_ARN", ""),
-        help="Amazon Bedrock AgentCore ARN from deployment"
+        help="Amazon Bedrock AgentCore ARN. Optional if Agent ID + Alias ID are set."
     )
+
+    col_ids1, col_ids2 = st.columns(2)
+    with col_ids1:
+        agent_id = st.text_input(
+            "Agent ID",
+            value=os.getenv("AGENT_ID", ""),
+            help="From create_agent() output"
+        )
+    with col_ids2:
+        agent_alias_id = st.text_input(
+            "Alias ID",
+            value=os.getenv("AGENT_ALIAS_ID", ""),
+            help="From create_agent_alias() output (e.g., 'prod' alias ID)"
+        )
     
     aws_region = st.selectbox(
         "AWS Region",
@@ -209,12 +223,18 @@ with col_btn2:
 with col_btn3:
     demo_mode = st.checkbox("Demo Mode", value=True, help="Use simulated data for demo")
 
+    auto_monitor = st.checkbox(
+        "Autonomous Monitor (every 60s)",
+        value=False,
+        help="Periodically re-run the analysis to emulate autonomous monitoring"
+    )
+
 # Process query
 if analyze_button:
     if not user_query.strip():
         st.error("⚠️ Please enter or select a query.")
-    elif not agent_arn and not demo_mode:
-        st.error("⚠️ Please configure Agent ARN in the sidebar or enable Demo Mode.")
+    elif not (agent_arn or (agent_id and agent_alias_id)) and not demo_mode:
+        st.error("⚠️ Please configure Agent (ARN or Agent ID + Alias ID) or enable Demo Mode.")
     else:
         with st.spinner("🤖 Agent is analyzing ocean conditions..."):
             try:
@@ -267,25 +287,36 @@ Powered by: Amazon Bedrock AgentCore | Copernicus Marine | Open-Meteo
                     response_text = demo_response
                     
                 else:
-                    # Production mode - invoke actual agent
+                    # Production mode - invoke actual Bedrock AgentCore
                     client = boto3.client('bedrock-agent-runtime', region_name=aws_region)
-                    
+
+                    # Resolve final IDs
+                    resolved_agent_id = (agent_id or (agent_arn.split('/')[-1] if agent_arn else "")).strip()
+                    resolved_alias_id = (agent_alias_id or "DEFAULT").strip()
+                    if not resolved_agent_id:
+                        raise ValueError("Agent ID could not be resolved. Provide Agent ID or Agent ARN.")
+
                     # Format query with location context
                     full_query = f"{user_query}\n\nLocation: {location_name}\nCoordinates: {latitude}, {longitude}"
-                    
+
                     response = client.invoke_agent(
-                        agentId=agent_arn.split('/')[-1],
-                        agentAliasId="DEFAULT",
+                        agentId=resolved_agent_id,
+                        agentAliasId=resolved_alias_id,
                         sessionId=f"session-{datetime.now().timestamp()}",
                         inputText=full_query
                     )
-                    
-                    # Parse streaming response
+
+                    # Parse streaming response (if provided)
                     response_text = ""
-                    for event in response['completion']:
-                        if 'chunk' in event:
-                            chunk_text = event['chunk']['bytes'].decode('utf-8')
-                            response_text += chunk_text
+                    completion = response.get('completion')
+                    if completion:
+                        for event in completion:
+                            if 'chunk' in event:
+                                chunk_text = event['chunk']['bytes'].decode('utf-8')
+                                response_text += chunk_text
+                    else:
+                        # Fallback: some SDKs return outputText directly
+                        response_text = response.get('output', {}).get('text', "") or json.dumps(response, indent=2)
                 
                 # Display response
                 st.success("✅ Analysis Complete!")
@@ -303,7 +334,11 @@ Powered by: Amazon Bedrock AgentCore | Copernicus Marine | Open-Meteo
                 
             except Exception as e:
                 st.error(f"❌ Error: {str(e)}")
-                st.info("💡 Tip: Make sure AWS credentials are configured and Agent ARN is correct, or enable Demo Mode for testing.")
+                st.info("💡 Tip: Configure AWS credentials and Bedrock Agent (Agent ID/Alias), or enable Demo Mode.")
+
+    # Autonomous monitor: refresh the page to re-run every 60 seconds when enabled
+    if auto_monitor:
+        st.experimental_autorefresh(interval=60_000, key="auto-monitor")
 
 # Display history
 if st.session_state.history:

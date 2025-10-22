@@ -1,53 +1,111 @@
-# Quick start guide for the Ocean Forecasting Agent
+# Ocean Forecasting Agent - Quick Start (AgentCore Edition)
 
-## 🚀 Getting Started in 5 Minutes
+## Current Deployment State ✅
+- ✅ Stack deployed: `ocean-agentcore` (us-east-1)
+- ✅ Agent created: `XFIYTNINMT` (OceanForecastAgent, amazon.nova-pro-v1:0)
+- ✅ Alias created: `TSTALIASID` (AgentTestAlias)
+- ✅ Lambda permission granted (Bedrock → ocean-agent-ingest)
+- ✅ API Gateway + agent-gateway Lambda live at: `https://aaabp3bu9h.execute-api.us-east-1.amazonaws.com/Prod`
 
-### Step 1: Clone and Setup
-```bash
-# Navigate to project
-cd "AI agent aws"
+## 🚀 Next 3 Steps to Go Live (10 minutes)
 
-# Create virtual environment
-python -m venv venv
+### Step 1: Configure Action Group in Console (5 min)
+**Manual step required due to SDK OpenAPI validation strictness.**
 
-# Activate (Windows)
-venv\Scripts\activate
-# Or (macOS/Linux)
-source venv/bin/activate
+1. Go to: https://console.aws.amazon.com/bedrock/home?region=us-east-1#/agents
+2. Click **OceanForecastAgent** (XFIYTNINMT)
+3. Click **Edit in Agent builder**
+4. Scroll to **Action groups** → Click **Add** → **Define with function details**
+5. Enter:
+   - Name: `fetch_ocean_data`
+   - Description: `Fetch ocean and weather data for maritime forecasting`
+6. Click **Add function**:
+   - Function name: `fetch_ocean_data`
+   - Description: `Fetch marine forecast data including waves, wind, currents`
+   - **Add 3 parameters**:
+     * `latitude` (number, **required**): Latitude coordinate (-90 to 90)
+     * `longitude` (number, **required**): Longitude coordinate (-180 to 180)
+     * `forecast_hours` (integer, optional): Forecast hours (1-168)
+7. **Action group invocation**:
+   - Select **Lambda function**
+   - Choose: `ocean-agent-ingest`
+   - ARN: `arn:aws:lambda:us-east-1:911167913661:function:ocean-agent-ingest`
+8. Click **Add** → **Create**
+
+### Step 2: Prepare the Agent (2 min)
+
+**Option A: Console**
+1. At the top of Agent page, click **Prepare**
+2. Wait for status to change: `PREPARING` → `PREPARED` (1-2 min)
+
+**Option B: Script**
+```powershell
+cd 'c:\Users\mubva\Downloads\AI agent aws'
+.\venv\Scripts\Activate.ps1
+python scripts/prepare_and_route.py --agent-id XFIYTNINMT --alias-id TSTALIASID --region us-east-1
 ```
 
-### Step 2: Install Dependencies
-```bash
+### Step 3: Test the /query Endpoint (1 min)
+
+```powershell
+$API = "https://aaabp3bu9h.execute-api.us-east-1.amazonaws.com/Prod"
+$body = '{"query":"Is it safe to sail from Cape Town to Mossel Bay tomorrow?","session_id":"demo-001"}'
+Invoke-WebRequest -Method POST -Uri "$API/query" -ContentType application/json -Body $body | Select-Object -ExpandProperty Content
+```
+
+**Expected response:**
+```json
+{
+  "response": "Based on the current forecast data for Cape Town to Mossel Bay route... [Agent's maritime analysis]"
+}
+```
+
+## 🎨 Bonus: Launch Streamlit UI
+
+```powershell
+cd 'c:\Users\mubva\Downloads\AI agent aws\streamlit_app'
+pip install -r requirements.txt
+$env:API_ENDPOINT = "https://aaabp3bu9h.execute-api.us-east-1.amazonaws.com/Prod"
+streamlit run app.py
+```
+
+Open: http://localhost:8501
+
+---
+
+## 🛠️ Local Development (FastAPI)
+
+If you want to run the FastAPI app locally (not using Bedrock Agents):
+
+### Step 1: Setup
+```powershell
+cd "c:\Users\mubva\Downloads\AI agent aws"
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### Step 3: Configure AWS
-```bash
-# Copy environment template
+### Step 2: Configure
+```powershell
 cp .env.example .env
-
-# Edit .env with your AWS credentials:
-# AWS_REGION=us-east-1
-# AWS_ACCESS_KEY_ID=your_key
-# AWS_SECRET_ACCESS_KEY=your_secret
-# BEDROCK_MODEL_ID=us.anthropic.claude-3-5-sonnet-20241022-v2:0
+# Edit .env with your AWS credentials
 ```
 
-### Step 4: Run Locally
-```bash
-python -m uvicorn src.main:app --reload
+### Step 3: Run
+```powershell
+python -m uvicorn src.main:app --reload --host 127.0.0.1 --port 8080
 ```
 
-Visit: http://localhost:8000/docs
+Visit: http://127.0.0.1:8080/docs
 
-### Step 5: Test the API
-```bash
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "Is it safe to sail from Cape Town to Mossel Bay tomorrow?",
-    "session_id": "test-1"
-  }'
+### Step 4: Test
+```powershell
+$body = @{
+    query = "Is it safe to sail from Cape Town to Mossel Bay tomorrow?"
+    session_id = "test-001"
+} | ConvertTo-Json
+
+Invoke-WebRequest -Uri "http://127.0.0.1:8080/query" -Method Post -ContentType "application/json" -Body $body | Select-Object -ExpandProperty Content
 ```
 
 ## 📦 Deploy to AWS

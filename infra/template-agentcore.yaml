@@ -122,10 +122,10 @@ Resources:
         - Statement:
             - Sid: InvokeAgent
               Effect: Allow
-              Action: [bedrock:InvokeAgent, bedrock:InvokeAgentAlias]
+              Action: [bedrock:InvokeAgent]
               Resource:
-                - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/*"
-                - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent-alias/*"
+                - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/${AgentId}"
+                - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent-alias/${AgentId}/${AgentAliasId}"
             - Sid: Logs
               Effect: Allow
               Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents]
@@ -142,6 +142,9 @@ Outputs:
     Value: !Ref DataBucket
   IngestFunctionName:
     Value: !Ref IngestFunction
+  IngestFunctionArn:
+    Description: ARN of the ingest Lambda (bind this to the Agent action group)
+    Value: !GetAtt IngestFunction.Arn
   ApiInvokeUrl:
     Description: Invoke URL root for API (append /query)
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"

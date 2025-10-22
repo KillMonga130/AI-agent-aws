@@ -79,6 +79,15 @@ $ALIAS_ID = (Get-Content agent-alias.json | ConvertFrom-Json).agentAliasId
 
 > If your region doesn’t offer the model, pick an available one from Bedrock Model Access.
 
+Helper script (boto3):
+```powershell
+$ROLE_ARN = (aws cloudformation describe-stacks --stack-name ocean-agentcore --query "Stacks[0].Outputs[?OutputKey=='AgentExecutionRoleArn'].OutputValue" --output text)
+python .\scripts\bedrock_agent_setup.py --role-arn $ROLE_ARN --instructions-file .\everything.md --region $REGION `
+  --name OceanForecastAgent --alias prod --model amazon.nova-pro-v1:0 | Tee-Object agent-out.json
+$AGENT_ID = (Get-Content agent-out.json | ConvertFrom-Json).agentId
+$ALIAS_ID = (Get-Content agent-out.json | ConvertFrom-Json).agentAliasId
+```
+
 ## 6) Create Action Group for `fetch_ocean_data`
 In the Bedrock Agent console, add an Action group:
 - Name: `oceanTools`
@@ -104,11 +113,28 @@ $API=$(aws cloudformation describe-stacks --stack-name ocean-agentcore --query "
 Invoke-WebRequest -Method POST -Uri "$API/query" -ContentType application/json -Body '{"query":"Is it safe to sail from Cape Town to Mossel Bay tomorrow?","session_id":"demo-001"}' | Select-Object -ExpandProperty Content
 ```
 
-## 9) Observability
+## 9) Optional: Local Web UI (Streamlit)
+
+Run a simple UI to query the API without writing code.
+
+```powershell
+cd "c:\Users\mubva\Downloads\AI agent aws\streamlit_app"
+# (Optional) activate venv, then install deps
+pip install -r requirements.txt
+
+# Set your API base URL for the app (no trailing slash)
+$env:OCEAN_API = (aws cloudformation describe-stacks --stack-name ocean-agentcore --query "Stacks[0].Outputs[?OutputKey=='ApiInvokeUrl'].OutputValue" --output text)
+
+python -m streamlit run app.py
+```
+
+The app sends server-side requests (no browser CORS hassles) and shows the raw JSON plus a friendly response view.
+
+## 10) Observability
 - CloudWatch Logs: `/aws/lambda/ocean-agent-ingest`, `/aws/lambda/ocean-agent-agent-gateway`
 - X-Ray (enabled via Tracing: Active) — view traces if X-Ray is enabled in your account
 
-## 10) Troubleshooting
+## 11) Troubleshooting
 - 403 or model not allowed: enable model access in Bedrock → Model access
 - InvokeAgent fails: ensure Agent Alias exists and Lambda env has AGENT_ID and AGENT_ALIAS_ID
 - CORS: For a browser-based client, front the API with CloudFront or add an OPTIONS method + CORS headers

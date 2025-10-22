@@ -11,7 +11,9 @@ handler.setFormatter(jsonlogger.JsonFormatter("%(asctime)s %(levelname)s %(messa
 if not logger.handlers:
     logger.addHandler(handler)
 
-client = boto3.client("bedrock-agent-runtime")
+_region = os.getenv("REGION")
+_session = boto3.Session(region_name=_region) if _region else boto3.Session()
+client = _session.client("bedrock-agent-runtime")
 
 
 def lambda_handler(event, context):
